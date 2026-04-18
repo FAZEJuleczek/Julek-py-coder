@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JulekPy | Python Learning C2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
+    <style>
+        :root { --neon: #00f2ff; --bg: #050505; --card: rgba(255, 255, 255, 0.03); --gold: #ffae00; --err: #ff4444; }
+        body { background: var(--bg); color: #fff; font-family: 'Consolas', monospace; margin: 0; padding: 10px; display: flex; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+        
+        .container { width: 100%; max-width: 1200px; border: 1px solid var(--neon); border-radius: 15px; padding: 20px; background: var(--card); box-shadow: 0 0 30px rgba(0, 242, 255, 0.1); margin: auto; }
+        .header { border-bottom: 2px solid var(--neon); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+        .card { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; min-height: 450px; display: flex; flex-direction: column; }
+        .label { font-size: 10px; color: var(--neon); letter-spacing: 2px; margin-bottom: 15px; display: block; text-transform: uppercase; }
+
+        /* Stylizacja edytora */
+        #editor { flex-grow: 1; border-radius: 5px; border: 1px solid rgba(0, 242, 255, 0.2); font-size: 14px; }
+
+        /* Konsola / Stream */
+        #terminal-stream { overflow-y: auto; flex-grow: 1; }
+        .item { padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 12px; line-height: 1.4; animation: fadeIn 0.3s ease; border-left: 3px solid var(--neon); background: rgba(0, 242, 255, 0.05); }
+        .success-item { border-left: 3px solid var(--gold); background: rgba(255, 174, 0, 0.05); }
+        .error-item { border-left: 3px solid var(--err); background: rgba(255, 68, 68, 0.05); }
+
+        .btn-execute { background: transparent; border: 1px solid var(--neon); color: var(--neon); padding: 10px; margin-top: 15px; cursor: pointer; font-family: 'Consolas', monospace; font-weight: bold; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
+        .btn-execute:hover { background: var(--neon); color: #000; box-shadow: 0 0 20px var(--neon); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div style="color: var(--neon); font-weight: bold; letter-spacing: 3px;">JULEKPY_LAB_v1.0</div>
+        <div id="clock" style="font-size: 10px; opacity: 0.6;">00:00:00</div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <span class="label">● SOURCE_CODE_INPUT (PYTHON)</span>
+            <div id="editor"># Napisz skrypt sprawdzający Ryzena 5
+cpu = "Ryzen 5"
+if cpu == "Ryzen 5":
+    print("STATUS: SYSTEM_READY")</div>
+            <button class="btn-execute" onclick="executeCode()">Execute Payload</button>
+        </div>
+
+        <div class="card">
+            <span class="label">● TERMINAL_OUTPUT_STREAM</span>
+            <div id="terminal-stream">
+                <div class="item">Czekam na instrukcje...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Inicjalizacja Edytora Ace
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/python");
+    editor.setOptions({
+        showPrintMargin: false,
+        fontFamily: "Consolas",
+        enableBasicAutocompletion: true,
+        enableLiveAutocompletion: true
+    });
+
+    function addLog(text, type = 'normal') {
+        const stream = document.getElementById('terminal-stream');
+        const item = document.createElement('div');
+        item.className = `item ${type === 'success' ? 'success-item' : (type === 'error' ? 'error-item' : '')}`;
+        item.innerHTML = `<span style="opacity:0.5 text-xs">[${new Date().toLocaleTimeString()}]</span><br>${text}`;
+        stream.prepend(item); // Nowe logi na górze
+    }
+
+    async function executeCode() {
+        const code = editor.getValue();
+        addLog("Wysyłanie payloadu do silnika...");
+
+        // Symulacja sprawdzenia (W następnym kroku dodamy Piston API)
+        setTimeout(() => {
+            if (code.includes('print')) {
+                addLog("<b>EXECUTION_SUCCESS:</b> <br>Kod wykonany pomyślnie na Ryzen 5.", "success");
+            } else {
+                addLog("<b>COMPILATION_ERROR:</b> <br>Brak komendy wyjścia (print).", "error");
+            }
+        }, 600);
+    }
+
+    // Zegar
+    setInterval(() => {
+        const c = document.getElementById('clock');
+        if(c) c.innerText = new Date().toLocaleTimeString();
+    }, 1000);
+</script>
+
+</body>
+</html>
