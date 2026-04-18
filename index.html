@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JulekPy | Gamma-4 C2 Interface</title>
+    <title>JulekPy | Gamma-4 Integrated</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <style>
@@ -12,17 +12,16 @@
         .container { width: 100%; max-width: 1400px; border: 1px solid var(--neon); border-radius: 15px; padding: 20px; background: var(--card); box-shadow: 0 0 40px rgba(0, 242, 255, 0.1); margin: auto; }
         .header { border-bottom: 2px solid var(--gamma); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .grid { display: grid; grid-template-columns: 350px 1.2fr 0.8fr; gap: 15px; }
-        .card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; min-height: 550px; display: flex; flex-direction: column; position: relative; }
+        .card { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; min-height: 550px; display: flex; flex-direction: column; }
         .label { font-size: 10px; color: var(--gamma); letter-spacing: 2px; margin-bottom: 15px; display: block; text-transform: uppercase; border-bottom: 1px solid var(--gamma); padding-bottom: 5px; }
         #mission-box { color: #00ff41; font-size: 13px; line-height: 1.6; }
         #editor { flex-grow: 1; border-radius: 5px; border: 1px solid rgba(188, 19, 254, 0.3); font-size: 14px; }
         #terminal-stream { overflow-y: auto; flex-grow: 1; max-height: 480px; font-size: 12px; }
-        .item { padding: 8px; margin-bottom: 8px; border-radius: 4px; border-left: 2px solid var(--neon); background: rgba(0, 242, 255, 0.03); animation: slideIn 0.3s ease; }
-        .success-item { border-left-color: var(--gold); background: rgba(255, 174, 0, 0.05); }
+        .item { padding: 8px; margin-bottom: 8px; border-radius: 4px; border-left: 2px solid var(--neon); background: rgba(0, 242, 255, 0.03); }
+        .success-item { border-left-color: var(--gold); color: #fff; }
         .btn-execute { background: transparent; border: 1px solid var(--gamma); color: var(--gamma); padding: 12px; margin-top: 15px; cursor: pointer; font-family: 'Consolas', monospace; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
         .btn-execute:hover:not(:disabled) { background: var(--gamma); color: #fff; box-shadow: 0 0 20px var(--gamma); }
         .btn-execute:disabled { opacity: 0.2; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
         @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -31,32 +30,32 @@
 <div class="container">
     <div class="header">
         <div>
-            <div style="color: var(--gamma); font-weight: bold; letter-spacing: 3px;">JULEKPY_v2.3_GAMMA_LINK</div>
-            <div id="status-line" style="font-size: 8px; color: var(--neon); margin-top: 4px;">UPLINK: WAITING...</div>
+            <div style="color: var(--gamma); font-weight: bold; letter-spacing: 3px;">JULEKPY_v2.4_GAMMA_INTEGRATED</div>
+            <div id="status-line" style="font-size: 8px; color: var(--neon); margin-top: 4px;">SYSTEM: GAMMA_LINK_ESTABLISHED</div>
         </div>
         <div id="clock" style="font-size: 10px; opacity: 0.6;">00:00:00</div>
     </div>
 
     <div class="grid">
         <div class="card">
-            <span class="label">● GAMMA_4_MISSIONS</span>
-            <div id="mission-box">Nawiązywanie łączności z API Gemini Gamma-4...</div>
-            <div style="margin-top: 20px;">
-                <button class="btn-execute" onclick="fetchMission()" style="font-size: 10px; width: 100%;">FORCE_SYNC_C2</button>
+            <span class="label">● GAMMA_DATABASE</span>
+            <div id="mission-box">Oczekiwanie na wybór misji...</div>
+            <div id="mission-list" style="margin-top: 20px;">
+                <button class="btn-execute" onclick="loadMission(0)" style="font-size: 9px; width: 100%; margin-bottom: 5px;">MISJA M-001: RAM_CLEANER</button>
+                <button class="btn-execute" onclick="loadMission(1)" style="font-size: 9px; width: 100%;">MISJA M-002: CRYPTO_BREAK</button>
             </div>
         </div>
 
         <div class="card">
             <span class="label">● PAYLOAD_EDITOR</span>
-            <div id="editor"># System zainicjowany.
-# Oczekiwanie na wstrzyknięcie misji...</div>
+            <div id="editor"># Wybierz misję z panelu po lewej...</div>
             <button class="btn-execute" id="run-btn" onclick="executeCode()" disabled>Engine Offline</button>
         </div>
 
         <div class="card">
-            <span class="label">● GAMMA_TERMINAL</span>
+            <span class="label">● TERMINAL_STDOUT</span>
             <div id="terminal-stream">
-                <div class="item">Wczytywanie modułów Gamma 4...</div>
+                <div class="item">Baza misji Gamma 4 załadowana lokalnie.</div>
             </div>
         </div>
     </div>
@@ -70,6 +69,22 @@
 
     let pyodide;
 
+    // BAZA MISJI GAMMA 4 (Zintegrowana)
+    const GAMMA_MISSIONS = [
+        {
+            id: "M-001",
+            title: "OPERACJA: RAM_CLEANER",
+            description: "Wykryto 'intel_me.sys'. Usuń go z listy procesów.",
+            template: "procesy = ['chrome', 'intel_me.sys', 'spotify']\n# TWOJE ZADANIE: Wyklucz intel_me.sys\nclean = [p for p in procesy if p != 'intel_me.sys']\nprint(f'STATUS: {clean}')"
+        },
+        {
+            id: "M-002",
+            title: "OPERACJA: CRYPTO_BREAK",
+            description: "Odszyfruj hasło usuwając podkreślniki.",
+            template: "msg = 'r_y_z_e_n_p_o_w_e_r'\n# TWOJE ZADANIE: Odszyfruj msg używając .replace('_', '')\ndecrypted = msg.replace('_', '')\nprint(f'HASŁO: {decrypted}')"
+        }
+    ];
+
     function addLog(text, type = 'normal') {
         const stream = document.getElementById('terminal-stream');
         const item = document.createElement('div');
@@ -78,31 +93,14 @@
         stream.prepend(item); 
     }
 
-    // Łącze z moją bazą misji (Gamma-4 API)
-    async function fetchMission() {
-        document.getElementById('status-line').innerText = "UPLINK: SYNCING_WITH_GAMMA_4";
-        try {
-            // Używamy publicznego proxy do pobrania misji z mojego gista
-            const response = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://pastebin.com/raw/L1N3R9v4'));
-            const dataRaw = await response.json();
-            const data = JSON.parse(dataRaw.contents);
-
-            document.getElementById('mission-box').innerHTML = `
-                <b style="color:var(--gold)">MISJA: ${data.id}</b><br>
-                <span style="font-size:14px;">${data.title}</span><br><br>
-                ${data.description}
-            `;
-            
-            // Wstaw kod jeśli edytor jest w stanie spoczynku
-            if (editor.getValue().includes("System zainicjowany")) {
-                editor.setValue(data.template);
-            }
-
-            document.getElementById('status-line').innerText = "UPLINK: GAMMA_CONNECTED";
-            addLog("Odebrano dane od Gamma-4.", "success");
-        } catch (err) {
-            addLog("Błąd Uplinku. Sprawdź status C2.", "error");
-        }
+    function loadMission(index) {
+        const m = GAMMA_MISSIONS[index];
+        document.getElementById('mission-box').innerHTML = `
+            <b style="color:var(--gold)">${m.id}: ${m.title}</b><br><br>
+            ${m.description}
+        `;
+        editor.setValue(m.template);
+        addLog(`Wczytano misję ${m.id} z bazy Gamma.`, "success");
     }
 
     async function initPython() {
@@ -110,9 +108,8 @@
             pyodide = await loadPyodide();
             document.getElementById('run-btn').disabled = false;
             document.getElementById('run-btn').innerText = "Run Payload";
-            addLog("Lokalny silnik Python READY.", "success");
-            fetchMission();
-        } catch (e) { addLog("Błąd inicjalizacji.", "error"); }
+            addLog("Gamma Engine READY.", "success");
+        } catch (e) { addLog("Błąd silnika.", "error"); }
     }
 
     async function executeCode() {
@@ -120,7 +117,7 @@
         addLog("Gamma-4 Executing...");
         pyodide.setStdout({ batched: (str) => { addLog("<br><b>[OUTPUT]</b>:<br>" + str.replace(/\n/g, '<br>'), "success"); } });
         try { await pyodide.runPythonAsync(code); } 
-        catch (err) { addLog("<br><b>[ERROR]</b>: " + err.message); }
+        catch (err) { addLog("<br><b>[ERR]</b>: " + err.message); }
     }
 
     window.onload = initPython;
