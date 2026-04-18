@@ -1,128 +1,150 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JulekPy | Gamma-4 Integrated</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JulekPy | Professional Learning</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --neon: #00f2ff; --bg: #050505; --card: rgba(255, 255, 255, 0.05); --gold: #ffae00; --err: #ff4444; --gamma: #bc13fe; }
-        body { background: var(--bg); color: #fff; font-family: 'Consolas', monospace; margin: 0; padding: 10px; display: flex; justify-content: center; min-height: 100vh; overflow-x: hidden; }
-        .container { width: 100%; max-width: 1400px; border: 1px solid var(--neon); border-radius: 15px; padding: 20px; background: var(--card); box-shadow: 0 0 40px rgba(0, 242, 255, 0.1); margin: auto; }
-        .header { border-bottom: 2px solid var(--gamma); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .grid { display: grid; grid-template-columns: 350px 1.2fr 0.8fr; gap: 15px; }
-        .card { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; min-height: 550px; display: flex; flex-direction: column; }
-        .label { font-size: 10px; color: var(--gamma); letter-spacing: 2px; margin-bottom: 15px; display: block; text-transform: uppercase; border-bottom: 1px solid var(--gamma); padding-bottom: 5px; }
-        #mission-box { color: #00ff41; font-size: 13px; line-height: 1.6; }
-        #editor { flex-grow: 1; border-radius: 5px; border: 1px solid rgba(188, 19, 254, 0.3); font-size: 14px; }
-        #terminal-stream { overflow-y: auto; flex-grow: 1; max-height: 480px; font-size: 12px; }
-        .item { padding: 8px; margin-bottom: 8px; border-radius: 4px; border-left: 2px solid var(--neon); background: rgba(0, 242, 255, 0.03); }
-        .success-item { border-left-color: var(--gold); color: #fff; }
-        .btn-execute { background: transparent; border: 1px solid var(--gamma); color: var(--gamma); padding: 12px; margin-top: 15px; cursor: pointer; font-family: 'Consolas', monospace; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
-        .btn-execute:hover:not(:disabled) { background: var(--gamma); color: #fff; box-shadow: 0 0 20px var(--gamma); }
-        .btn-execute:disabled { opacity: 0.2; }
-        @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .ace_editor { border-radius: 8px; }
+        .locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
+        .sidebar-item { transition: all 0.2s; border-left: 4px solid transparent; }
+        .sidebar-item.active { border-left-color: #38bdf8; background: #1e293b; }
+        .mission-complete { border-left-color: #10b981 !important; }
     </style>
 </head>
-<body>
+<body class="h-screen overflow-hidden flex flex-col">
 
-<div class="container">
-    <div class="header">
-        <div>
-            <div style="color: var(--gamma); font-weight: bold; letter-spacing: 3px;">JULEKPY_v2.4_GAMMA_INTEGRATED</div>
-            <div id="status-line" style="font-size: 8px; color: var(--neon); margin-top: 4px;">SYSTEM: GAMMA_LINK_ESTABLISHED</div>
+    <header class="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center font-bold text-white">J</div>
+            <span class="font-bold tracking-tight text-slate-200">JulekPy <span class="text-sky-500">v2.6</span></span>
         </div>
-        <div id="clock" style="font-size: 10px; opacity: 0.6;">00:00:00</div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <span class="label">● GAMMA_DATABASE</span>
-            <div id="mission-box">Oczekiwanie na wybór misji...</div>
-            <div id="mission-list" style="margin-top: 20px;">
-                <button class="btn-execute" onclick="loadMission(0)" style="font-size: 9px; width: 100%; margin-bottom: 5px;">MISJA M-001: RAM_CLEANER</button>
-                <button class="btn-execute" onclick="loadMission(1)" style="font-size: 9px; width: 100%;">MISJA M-002: CRYPTO_BREAK</button>
+        <div class="flex items-center gap-4 text-sm font-medium">
+            <span id="streak" class="text-orange-400">🔥 1 Day Streak</span>
+            <div class="h-2 w-32 bg-slate-700 rounded-full overflow-hidden">
+                <div id="total-progress" class="h-full bg-sky-500 transition-all" style="width: 0%"></div>
             </div>
         </div>
+    </header>
 
-        <div class="card">
-            <span class="label">● PAYLOAD_EDITOR</span>
-            <div id="editor"># Wybierz misję z panelu po lewej...</div>
-            <button class="btn-execute" id="run-btn" onclick="executeCode()" disabled>Engine Offline</button>
-        </div>
+    <main class="flex-1 grid grid-cols-[300px_1fr_350px] overflow-hidden">
+        
+        <aside class="border-right border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-4 overflow-y-auto">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest px-2">Mapa Kursu</h2>
+            <div id="mission-list" class="flex flex-col gap-2">
+                </div>
+        </aside>
 
-        <div class="card">
-            <span class="label">● TERMINAL_STDOUT</span>
-            <div id="terminal-stream">
-                <div class="item">Baza misji Gamma 4 załadowana lokalnie.</div>
+        <section class="flex flex-col bg-slate-950 p-4 gap-4">
+            <div class="flex items-center justify-between px-2">
+                <h1 id="current-title" class="text-lg font-bold">Wybierz lekcję</h1>
+                <button id="run-btn" onclick="executeCode()" disabled class="bg-sky-600 hover:bg-sky-500 disabled:opacity-30 text-white px-6 py-2 rounded-lg font-bold transition-all flex items-center gap-2">
+                    <span>Uruchom i Sprawdź</span>
+                    <kbd class="text-[10px] bg-sky-800 px-1.5 py-0.5 rounded">Ctrl+Enter</kbd>
+                </button>
             </div>
-        </div>
-    </div>
-</div>
+            <div id="mission-desc" class="bg-slate-900 border border-slate-800 p-4 rounded-xl text-slate-300 text-sm leading-relaxed">
+                Wybierz misję z panelu po lewej, aby rozpocząć naukę.
+            </div>
+            <div id="editor" class="flex-1 shadow-2xl"></div>
+        </section>
 
-<script>
-    var editor = ace.edit("editor");
-    editor.setTheme("ace/theme/monokai");
-    editor.session.setMode("ace/mode/python");
-    editor.setOptions({ showPrintMargin: false, fontFamily: "Consolas", fontSize: "14px" });
+        <aside class="border-l border-slate-800 bg-slate-900 p-4 flex flex-col gap-4">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Konsola Systemowa</h2>
+            <div id="terminal" class="flex-1 font-mono text-sm overflow-y-auto bg-black/40 p-4 rounded-lg border border-slate-800 flex flex-col gap-2">
+                <div class="text-slate-500 italic">Ładowanie jądra Python...</div>
+            </div>
+            <div id="success-card" class="hidden bg-emerald-500/10 border border-emerald-500/50 p-4 rounded-xl">
+                <div class="text-emerald-400 font-bold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Misja Ukończona!
+                </div>
+                <p class="text-emerald-300/80 text-xs mt-1">Gratulacje! Odblokowano następny poziom.</p>
+            </div>
+        </aside>
+    </main>
 
-    let pyodide;
+    <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/cloud_editor_dark");
+        editor.session.setMode("ace/mode/python");
+        editor.setOptions({ fontSize: "15px", showPrintMargin: false });
 
-    // BAZA MISJI GAMMA 4 (Zintegrowana)
-    const GAMMA_MISSIONS = [
-        {
-            id: "M-001",
-            title: "OPERACJA: RAM_CLEANER",
-            description: "Wykryto 'intel_me.sys'. Usuń go z listy procesów.",
-            template: "procesy = ['chrome', 'intel_me.sys', 'spotify']\n# TWOJE ZADANIE: Wyklucz intel_me.sys\nclean = [p for p in procesy if p != 'intel_me.sys']\nprint(f'STATUS: {clean}')"
-        },
-        {
-            id: "M-002",
-            title: "OPERACJA: CRYPTO_BREAK",
-            description: "Odszyfruj hasło usuwając podkreślniki.",
-            template: "msg = 'r_y_z_e_n_p_o_w_e_r'\n# TWOJE ZADANIE: Odszyfruj msg używając .replace('_', '')\ndecrypted = msg.replace('_', '')\nprint(f'HASŁO: {decrypted}')"
+        let pyodide;
+        let activeIdx = null;
+        const MISSIONS = [
+            { id: 1, title: "Zmienne: Startup", desc: "Stwórz zmienną o nazwie <b>name</b> i przypisz jej wartość <b>'Julek'</b>. Następnie wypisz ją (print).", template: "# Tu wpisz kod\n", expected: "Julek", unlocked: true },
+            { id: 2, title: "Liczby: Kalkulator", desc: "Stwórz zmienną <b>a</b> równą 10 i <b>b</b> równą 5. Wypisz ich sumę.", template: "a = 10\nb = 5\n# Wypisz sumę a + b\n", expected: "15", unlocked: false },
+            { id: 3, title: "Listy: Archiwum", desc: "Wypisz trzeci element z listy: <b>['A', 'B', 'C', 'D']</b>", template: "baza = ['A', 'B', 'C', 'D']\n# Pamiętaj: liczmy od 0!\n", expected: "C", unlocked: false }
+        ];
+
+        function renderMap() {
+            const list = document.getElementById('mission-list');
+            list.innerHTML = '';
+            MISSIONS.forEach((m, i) => {
+                const btn = document.createElement('div');
+                btn.className = `sidebar-item p-3 rounded-lg cursor-pointer ${m.unlocked ? '' : 'locked'} ${activeIdx === i ? 'active' : ''}`;
+                btn.onclick = () => m.unlocked && loadMission(i);
+                btn.innerHTML = `<div class="text-xs text-slate-500 font-bold">LEKCJA 0${m.id}</div><div class="text-sm font-medium">${m.title}</div>`;
+                list.appendChild(btn);
+            });
+            document.getElementById('total-progress').style.width = (MISSIONS.filter(m => !m.unlocked).length === 0 ? 100 : (MISSIONS.filter(m => !m.unlocked).length === MISSIONS.length ? 0 : 33)) + '%';
         }
-    ];
 
-    function addLog(text, type = 'normal') {
-        const stream = document.getElementById('terminal-stream');
-        const item = document.createElement('div');
-        item.className = `item ${type === 'success' ? 'success-item' : ''}`;
-        item.innerHTML = `[${new Date().toLocaleTimeString()}] ${text}`;
-        stream.prepend(item); 
-    }
+        function loadMission(idx) {
+            activeIdx = idx;
+            const m = MISSIONS[idx];
+            document.getElementById('current-title').innerText = m.title;
+            document.getElementById('mission-desc').innerHTML = m.desc;
+            editor.setValue(m.template);
+            document.getElementById('success-card').classList.add('hidden');
+            renderMap();
+        }
 
-    function loadMission(index) {
-        const m = GAMMA_MISSIONS[index];
-        document.getElementById('mission-box').innerHTML = `
-            <b style="color:var(--gold)">${m.id}: ${m.title}</b><br><br>
-            ${m.description}
-        `;
-        editor.setValue(m.template);
-        addLog(`Wczytano misję ${m.id} z bazy Gamma.`, "success");
-    }
-
-    async function initPython() {
-        try {
+        async function init() {
             pyodide = await loadPyodide();
             document.getElementById('run-btn').disabled = false;
-            document.getElementById('run-btn').innerText = "Run Payload";
-            addLog("Gamma Engine READY.", "success");
-        } catch (e) { addLog("Błąd silnika.", "error"); }
-    }
+            addLog("System gotowy do pracy.", "text-sky-400");
+            renderMap();
+            loadMission(0);
+        }
 
-    async function executeCode() {
-        const code = editor.getValue();
-        addLog("Gamma-4 Executing...");
-        pyodide.setStdout({ batched: (str) => { addLog("<br><b>[OUTPUT]</b>:<br>" + str.replace(/\n/g, '<br>'), "success"); } });
-        try { await pyodide.runPythonAsync(code); } 
-        catch (err) { addLog("<br><b>[ERR]</b>: " + err.message); }
-    }
+        function addLog(msg, color = "text-slate-300") {
+            const term = document.getElementById('terminal');
+            const entry = document.createElement('div');
+            entry.className = color;
+            entry.innerHTML = `<span class="text-slate-600 mr-2">></span>${msg}`;
+            term.appendChild(entry);
+            term.scrollTop = term.scrollHeight;
+        }
 
-    window.onload = initPython;
-    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
-</script>
+        async function executeCode() {
+            let output = "";
+            pyodide.setStdout({ batched: (str) => { output += str.trim(); } });
+            addLog("Uruchamianie...", "text-slate-500");
 
+            try {
+                await pyodide.runPythonAsync(editor.getValue());
+                addLog(output || "Brak outputu", "text-white font-bold");
+
+                if (output === MISSIONS[activeIdx].expected) {
+                    addLog("Weryfikacja: POPRAWNA", "text-emerald-400");
+                    document.getElementById('success-card').classList.remove('hidden');
+                    if (MISSIONS[activeIdx + 1]) MISSIONS[activeIdx + 1].unlocked = true;
+                    renderMap();
+                } else {
+                    addLog("Weryfikacja: BŁĘDNA. Oczekiwano: " + MISSIONS[activeIdx].expected, "text-rose-400");
+                }
+            } catch (e) {
+                addLog("BŁĄD KODU: " + e.message, "text-rose-500");
+            }
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
