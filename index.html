@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JulekPy | Private C2 Lab</title>
+    <title>JulekPy | Standalone C2 Lab</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <style>
         :root { --neon: #00f2ff; --bg: #050505; --card: rgba(255, 255, 255, 0.03); --gold: #ffae00; --err: #ff4444; }
         body { background: var(--bg); color: #fff; font-family: 'Consolas', monospace; margin: 0; padding: 10px; display: flex; justify-content: center; min-height: 100vh; overflow-x: hidden; }
@@ -19,9 +20,8 @@
         .success-item { border-left: 3px solid var(--gold); background: rgba(255, 174, 0, 0.05); }
         .error-item { border-left: 3px solid var(--err); background: rgba(255, 68, 68, 0.05); color: var(--err); }
         .btn-execute { background: transparent; border: 1px solid var(--neon); color: var(--neon); padding: 12px; margin-top: 15px; cursor: pointer; font-family: 'Consolas', monospace; font-weight: bold; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
-        .btn-execute:hover { background: var(--neon); color: #000; box-shadow: 0 0 20px var(--neon); }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 10px; }
+        .btn-execute:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-execute:hover:not(:disabled) { background: var(--neon); color: #000; box-shadow: 0 0 20px var(--neon); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
@@ -31,26 +31,28 @@
 <div class="container">
     <div class="header">
         <div>
-            <div style="color: var(--neon); font-weight: bold; letter-spacing: 3px;">JULEKPY_LAB_v1.2</div>
-            <div id="status-line" style="font-size: 8px; color: var(--gold); margin-top: 4px;">ENGINE: STATIC_STABLE_3.10</div>
+            <div style="color: var(--neon); font-weight: bold; letter-spacing: 3px;">JULEKPY_v2.0_LOCAL</div>
+            <div id="status-line" style="font-size: 8px; color: var(--gold); margin-top: 4px;">SYSTEM: LOADING_PYTHON_CORE...</div>
         </div>
         <div id="clock" style="font-size: 10px; opacity: 0.6;">00:00:00</div>
     </div>
 
     <div class="grid">
         <div class="card">
-            <span class="label">● SOURCE_CODE_INPUT (PYTHON)</span>
-            <div id="editor"># Bypass CORS Mode
-print("JulekPy Connected!")
-for i in range(3):
-    print(f"Hacking step {i}...")</div>
-            <button class="btn-execute" onclick="executeCode()">Execute Payload</button>
+            <span class="label">● LOCAL_COMPILER_INPUT</span>
+            <div id="editor">print("Witaj w JulekPy v2.0!")
+import sys
+print(f"Lokalny Python: {sys.version}")
+print("-" * 20)
+for i in range(5):
+    print(f"Kompilacja segmentu {i}... OK")</div>
+            <button class="btn-execute" id="run-btn" onclick="executeCode()" disabled>Wait for Engine...</button>
         </div>
 
         <div class="card">
-            <span class="label">● TERMINAL_OUTPUT_STREAM</span>
+            <span class="label">● LOCAL_TERMINAL_STREAM</span>
             <div id="terminal-stream">
-                <div class="item">Inicjowanie JulekPy C2 Dashboard...</div>
+                <div class="item">Inicjowanie lokalnego jądra Pythona...</div>
             </div>
         </div>
     </div>
@@ -62,6 +64,8 @@ for i in range(3):
     editor.session.setMode("ace/mode/python");
     editor.setOptions({ showPrintMargin: false, fontFamily: "Consolas", fontSize: "14px", useWorker: false });
 
+    let pyodide;
+
     function addLog(text, type = 'normal') {
         const stream = document.getElementById('terminal-stream');
         const item = document.createElement('div');
@@ -70,38 +74,40 @@ for i in range(3):
         stream.prepend(item); 
     }
 
-    async function executeCode() {
-        const code = editor.getValue();
-        if(!code.trim()) return addLog("Pusty payload!", "error");
-
-        addLog("Wysyłanie pakietu bypass...");
-
+    // Załadowanie Pythona prosto do przeglądarki
+    async function initPython() {
         try {
-            const response = await fetch('https://emkc.org/api/v2/piston/execute', {
-                method: 'POST',
-                // Używamy standardowego JSON
-                body: JSON.stringify({
-                    language: 'python',
-                    version: '3.10.0', // Sztywna, najpopularniejsza wersja
-                    files: [{ content: code }]
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.run) {
-                if (data.run.stdout) addLog("<b>SUCCESS:</b><br>" + data.run.stdout.replace(/\n/g, '<br>'), "success");
-                if (data.run.stderr) addLog("<b>PY_ERR:</b><br>" + data.run.stderr.replace(/\n/g, '<br>'), "error");
-                if (!data.run.stdout && !data.run.stderr) addLog("Wykonano (brak wyjścia).");
-            } else {
-                addLog("BŁĄD: Serwer odrzucił żądanie (API Error).", "error");
-            }
-        } catch (error) {
-            addLog("CRITICAL: Blokada CORS lub brak neta.", "error");
-            console.error("CORS_BLOCK_DEBUG:", error);
+            pyodide = await loadPyodide();
+            document.getElementById('status-line').innerText = "SYSTEM: LOCAL_PYTHON_READY";
+            document.getElementById('run-btn').disabled = false;
+            document.getElementById('run-btn').innerText = "Execute Locally";
+            addLog("Jądro Pythona załadowane pomyślnie!", "success");
+        } catch (e) {
+            addLog("BŁĄD krytyczny przy ładowaniu silnika.", "error");
         }
     }
 
+    async function executeCode() {
+        const code = editor.getValue();
+        if(!code.trim()) return;
+
+        addLog("Uruchamianie lokalnego payloadu...");
+        
+        // Przechwytywanie print() z Pythona do naszego terminala
+        pyodide.setStdout({
+            batched: (str) => {
+                addLog("<b>OUTPUT:</b><br>" + str.replace(/\n/g, '<br>'), "success");
+            }
+        });
+
+        try {
+            await pyodide.runPythonAsync(code);
+        } catch (err) {
+            addLog("<b>RUNTIME_ERROR:</b><br>" + err.message, "error");
+        }
+    }
+
+    window.onload = initPython;
     setInterval(() => {
         document.getElementById('clock').innerText = new Date().toLocaleTimeString();
     }, 1000);
